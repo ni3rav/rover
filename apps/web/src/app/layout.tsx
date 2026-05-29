@@ -1,19 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, EB_Garamond } from "next/font/google";
+import { Figtree, Raleway } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const ebGaramond = EB_Garamond({subsets:['latin'],variable:'--font-serif'});
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ralewayHeading = Raleway({
   subsets: ["latin"],
+  variable: "--font-heading",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const figtree = Figtree({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -28,7 +23,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-serif", ebGaramond.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        "font-sans",
+        figtree.variable,
+        ralewayHeading.variable,
+      )}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
