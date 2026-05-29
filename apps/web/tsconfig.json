@@ -1,5 +1,5 @@
 {
-  "extends": "@rover/typescript-config/nextjs.json",
+  "extends": "@rover/typescript-config/",
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]
