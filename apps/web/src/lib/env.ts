@@ -8,6 +8,9 @@ const ServerEnvSchema = z.object({
   GITHUB_CLIENTID: z.string(),
   PORT: z.string(),
   GITHUB_CLIENT_SECRET: z.string(),
+  GITHUB_APP_ID: z.string(),
+  GITHUB_APP_SLUG: z.string(),
+  GITHUB_APP_PRIVATE_KEY: z.string(),
 });
 
 export const env = parseEnv(ServerEnvSchema, process.env);

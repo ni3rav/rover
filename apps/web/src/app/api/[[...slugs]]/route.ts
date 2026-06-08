@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { authRoutes } from "@/routes/auth";
 import { tryCatch } from "@rover/utils";
 import { db } from "@/database";
+import { githubAppRoutes } from "@/routes/github-app";
 
 // TODO: do connection checks later
 export const app = new Elysia({ prefix: "/api" }).get("/health", async () => {
@@ -29,6 +30,7 @@ export const app = new Elysia({ prefix: "/api" }).get("/health", async () => {
 });
 
 app.use(authRoutes);
+app.use(githubAppRoutes);
 
 export const GET = app.fetch;
 export const POST = app.fetch;
