@@ -31,6 +31,18 @@ type GithubInstallationRepositoriesResponse = {
   }>;
 };
 
+type GithubUserInstallationsResponse = {
+  total_count: number;
+  installations: Array<{
+    id: number;
+    repository_selection: string;
+    account: {
+      login: string;
+      type: string;
+    };
+  }>;
+};
+
 const GITHUB_API_URL = "https://api.github.com";
 
 function toBase64Url(value: string | Buffer): string {
@@ -38,8 +50,22 @@ function toBase64Url(value: string | Buffer): string {
   return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
+function getRequiredGithubAppEnv() {
+  if (!env.GITHUB_APP_ID || !env.GITHUB_APP_SLUG || !env.GITHUB_APP_PRIVATE_KEY) {
+    throw new Error(
+      "Missing GitHub App env vars: GITHUB_APP_ID, GITHUB_APP_SLUG, GITHUB_APP_PRIVATE_KEY",
+    );
+  }
+
+  return {
+    appId: env.GITHUB_APP_ID,
+    appSlug: env.GITHUB_APP_SLUG,
+    privateKey: env.GITHUB_APP_PRIVATE_KEY,
+  };
+}
+
 function getGithubAppPrivateKey(): string {
-  return env.GITHUB_APP_PRIVATE_KEY.replace(/\\n/g, "\n");
+  return getRequiredGithubAppEnv().privateKey.replace(/\\n/g, "\n");
 }
 
 export function createGithubAppJwt(): string {
@@ -53,7 +79,7 @@ export function createGithubAppJwt(): string {
   const payload = {
     iat: now - 60,
     exp: now + 9 * 60,
-    iss: env.GITHUB_APP_ID,
+    iss: getRequiredGithubAppEnv().appId,
   };
 
   const encodedHeader = toBase64Url(JSON.stringify(header));
@@ -95,7 +121,8 @@ async function githubRequest<T>(
 }
 
 export function getGithubAppInstallUrl(): string {
-  return `https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`;
+  const { appSlug } = getRequiredGithubAppEnv();
+  return `https://github.com/apps/${appSlug}/installations/new`;
 }
 
 export async function createGithubInstallationAccessToken(input: {
@@ -149,6 +176,20 @@ export async function getGithubInstallationRepositories(installationId: string) 
     totalCount: repos.total_count,
     repositories: repos.repositories,
   };
+}
+
+export async function getGithubUserInstallations(userAccessToken: string) {
+  const result = await githubRequest<GithubUserInstallationsResponse>(
+    "/user/installations?per_page=100",
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${userAccessToken}`,
+      },
+    },
+  );
+
+  return result.installations;
 }
 
 export function buildCloneUrl(fullName: string, token: string): string {
