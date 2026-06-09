@@ -4,7 +4,7 @@ import { tryCatch } from "@rover/utils";
 import { db } from "@/database";
 import { githubAppRoutes } from "@/routes/github-app";
 
-// TODO: do connection checks later
+// TODO: do rest of the service checks later
 export const app = new Elysia({ prefix: "/api" }).get("/health", async () => {
   const start = Date.now();
 
