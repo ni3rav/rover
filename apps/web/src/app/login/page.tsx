@@ -24,14 +24,18 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="container flex min-h-screen flex-1 items-center justify-center">
-      <section className="flex w-full max-w-sm flex-col gap-2 rounded-lg border bg-card shadow-sm">
+    <main className="container mx-auto flex min-h-screen w-full max-w-3xl flex-1 items-center justify-center px-4 py-10">
+      <section className="flex w-full max-w-sm flex-col gap-3 rounded-lg border bg-card p-5 shadow-sm">
         <h1 className="text-xl font-semibold">Sign in</h1>
         <p className="text-sm text-muted-foreground">
           Continue with GitHub to access your dashboard.
         </p>
 
-        <Button className="w-full" onClick={handleGithubSignIn} disabled={isLoading}>
+        <Button
+          className="w-full"
+          onClick={handleGithubSignIn}
+          disabled={isLoading}
+        >
           {isLoading ? "Redirecting..." : "Continue with GitHub"}
         </Button>
 

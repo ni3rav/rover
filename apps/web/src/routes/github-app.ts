@@ -9,6 +9,7 @@ import {
   createGithubInstallationAccessToken,
   getGithubAppInstallUrl,
   getGithubInstallationRepositories,
+  getGithubUserInstallationRepositories,
   getGithubUserInstallations,
 } from "@/lib/github-app";
 
@@ -92,35 +93,41 @@ export const githubAppRoutes = new Elysia({ prefix: "/github-app" })
       };
     }
 
-    const { data: installationDetails, error: repositoriesError } = await tryCatch(
-      Promise.all(
-        installations.map(async (installation) => {
-          const repos = await getGithubInstallationRepositories(String(installation.id));
+    const { data: installationDetails, error: repositoriesError } =
+      await tryCatch(
+        Promise.all(
+          installations.map(async (installation) => {
+            const repos = await getGithubUserInstallationRepositories(
+              githubAccount.accessToken,
+              String(installation.id),
+            );
 
-          return {
-            id: installation.id,
-            accountLogin: installation.account.login,
-            accountType: installation.account.type,
-            repositorySelection: installation.repository_selection,
-            totalCount: repos.totalCount,
-            repositories: repos.repositories.map((repo) => ({
-              id: repo.id,
-              fullName: repo.full_name,
-              private: repo.private,
-              defaultBranch: repo.default_branch,
-              cloneUrl: repo.clone_url,
-            })),
-          };
-        }),
-      ),
-    );
+            return {
+              id: installation.id,
+              accountLogin: installation.account.login,
+              accountType: installation.account.type,
+              repositorySelection: installation.repository_selection,
+              totalCount: repos.totalCount,
+              repositories: repos.repositories.map((repo) => ({
+                id: repo.id,
+                fullName: repo.full_name,
+                private: repo.private,
+                defaultBranch: repo.default_branch,
+                cloneUrl: repo.clone_url,
+              })),
+            };
+          }),
+        ),
+      );
 
     if (repositoriesError || !installationDetails) {
       set.status = 400;
       return {
         error: "Failed to load repositories for one or more installations",
         message:
-          repositoriesError instanceof Error ? repositoriesError.message : "Unknown error",
+          repositoriesError instanceof Error
+            ? repositoriesError.message
+            : "Unknown error",
       };
     }
 
@@ -129,67 +136,73 @@ export const githubAppRoutes = new Elysia({ prefix: "/github-app" })
       installations: installationDetails,
     };
   })
-  .get("/installations/:installationId/repositories", async ({ params, set }) => {
-    const { data, error } = await tryCatch(
-      getGithubInstallationRepositories(params.installationId),
-    );
+  .get(
+    "/installations/:installationId/repositories",
+    async ({ params, set }) => {
+      const { data, error } = await tryCatch(
+        getGithubInstallationRepositories(params.installationId),
+      );
 
-    if (error) {
-      set.status = 400;
+      if (error) {
+        set.status = 400;
+        return {
+          error: "Failed to fetch installation repositories",
+          message: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+
+      if (!data) {
+        set.status = 500;
+        return {
+          error: "No installation repositories returned",
+        };
+      }
+
+      return data;
+    },
+  )
+  .post(
+    "/installations/:installationId/access-token",
+    async ({ params, body, set }) => {
+      const input = (body ?? {}) as TokenBody;
+
+      const { data, error } = await tryCatch(
+        createGithubInstallationAccessToken({
+          installationId: params.installationId,
+          repositories: input.repositories,
+          repositoryIds: input.repositoryIds,
+        }),
+      );
+
+      if (error) {
+        set.status = 400;
+        return {
+          error: "Failed to create installation access token",
+          message: error instanceof Error ? error.message : "Unknown error",
+        };
+      }
+
+      if (!data) {
+        set.status = 500;
+        return {
+          error: "No installation access token returned",
+        };
+      }
+
       return {
-        error: "Failed to fetch installation repositories",
-        message: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-
-    if (!data) {
-      set.status = 500;
-      return {
-        error: "No installation repositories returned",
-      };
-    }
-
-    return data;
-  })
-  .post("/installations/:installationId/access-token", async ({ params, body, set }) => {
-    const input = (body ?? {}) as TokenBody;
-
-    const { data, error } = await tryCatch(
-      createGithubInstallationAccessToken({
         installationId: params.installationId,
-        repositories: input.repositories,
-        repositoryIds: input.repositoryIds,
-      }),
-    );
-
-    if (error) {
-      set.status = 400;
-      return {
-        error: "Failed to create installation access token",
-        message: error instanceof Error ? error.message : "Unknown error",
+        token: data.token,
+        expiresAt: data.expires_at,
+        permissions: data.permissions,
+        repositories:
+          data.repositories?.map((repo) => ({
+            id: repo.id,
+            name: repo.name,
+            fullName: repo.full_name,
+            private: repo.private,
+            cloneUrl: repo.clone_url,
+            authenticatedCloneUrl: buildCloneUrl(repo.full_name, data.token),
+          })) ?? [],
       };
-    }
-
-    if (!data) {
-      set.status = 500;
-      return {
-        error: "No installation access token returned",
-      };
-    }
-
-    return {
-      installationId: params.installationId,
-      token: data.token,
-      expiresAt: data.expires_at,
-      permissions: data.permissions,
-      repositories:
-        data.repositories?.map((repo) => ({
-          id: repo.id,
-          name: repo.name,
-          fullName: repo.full_name,
-          private: repo.private,
-          cloneUrl: repo.clone_url,
-          authenticatedCloneUrl: buildCloneUrl(repo.full_name, data.token),
-        })) ?? [],
-    };
-  });
+    },
+  );

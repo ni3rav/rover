@@ -51,7 +51,11 @@ function toBase64Url(value: string | Buffer): string {
 }
 
 function getRequiredGithubAppEnv() {
-  if (!env.GITHUB_APP_ID || !env.GITHUB_APP_SLUG || !env.GITHUB_APP_PRIVATE_KEY) {
+  if (
+    !env.GITHUB_APP_ID ||
+    !env.GITHUB_APP_SLUG ||
+    !env.GITHUB_APP_PRIVATE_KEY
+  ) {
     throw new Error(
       "Missing GitHub App env vars: GITHUB_APP_ID, GITHUB_APP_SLUG, GITHUB_APP_PRIVATE_KEY",
     );
@@ -65,7 +69,16 @@ function getRequiredGithubAppEnv() {
 }
 
 function getGithubAppPrivateKey(): string {
-  return getRequiredGithubAppEnv().privateKey.replace(/\\n/g, "\n");
+  let privateKey = getRequiredGithubAppEnv().privateKey.trim();
+
+  if (
+    (privateKey.startsWith('"') && privateKey.endsWith('"')) ||
+    (privateKey.startsWith("'") && privateKey.endsWith("'"))
+  ) {
+    privateKey = privateKey.slice(1, -1);
+  }
+
+  return privateKey.replace(/\\n/g, "\n");
 }
 
 export function createGithubAppJwt(): string {
@@ -96,10 +109,7 @@ export function createGithubAppJwt(): string {
   return `${signingInput}.${encodedSignature}`;
 }
 
-async function githubRequest<T>(
-  path: string,
-  init: RequestInit,
-): Promise<T> {
+async function githubRequest<T>(path: string, init: RequestInit): Promise<T> {
   const response = await fetch(`${GITHUB_API_URL}${path}`, {
     ...init,
     headers: {
@@ -111,9 +121,12 @@ async function githubRequest<T>(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as GithubApiError | null;
+    const errorBody = (await response
+      .json()
+      .catch(() => null)) as GithubApiError | null;
     throw new Error(
-      errorBody?.message || `GitHub API request failed with status ${response.status}`,
+      errorBody?.message ||
+        `GitHub API request failed with status ${response.status}`,
     );
   }
 
@@ -157,7 +170,9 @@ export async function createGithubInstallationAccessToken(input: {
   );
 }
 
-export async function getGithubInstallationRepositories(installationId: string) {
+export async function getGithubInstallationRepositories(
+  installationId: string,
+) {
   const token = await createGithubInstallationAccessToken({ installationId });
 
   const repos = await githubRequest<GithubInstallationRepositoriesResponse>(
@@ -190,6 +205,27 @@ export async function getGithubUserInstallations(userAccessToken: string) {
   );
 
   return result.installations;
+}
+
+export async function getGithubUserInstallationRepositories(
+  userAccessToken: string,
+  installationId: string,
+) {
+  const repos = await githubRequest<GithubInstallationRepositoriesResponse>(
+    `/user/installations/${installationId}/repositories?per_page=100`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${userAccessToken}`,
+      },
+    },
+  );
+
+  return {
+    installationId,
+    totalCount: repos.total_count,
+    repositories: repos.repositories,
+  };
 }
 
 export function buildCloneUrl(fullName: string, token: string): string {

@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="container flex flex-1 flex-col items-start justify-center gap-2">
+    <main className="container mx-auto flex min-h-screen w-full max-w-3xl flex-1 flex-col items-start justify-center gap-4 px-4 py-10">
       <h1 className="text-3xl font-semibold">Rover</h1>
-      <p className="text-sm text-muted-foreground">Open your dashboard to manage GitHub App access.</p>
+      <p className="text-sm text-muted-foreground">
+        Open your dashboard to manage GitHub App access.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <Button asChild>
